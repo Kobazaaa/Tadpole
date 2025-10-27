@@ -16,6 +16,6 @@ namespace kobengine
 {
 	Application* CreateApplication()
 	{
-		return new ::tadpole::TadpoleEditor(WindowSettings("Tadpole Editor", 800, 600));
+		return new tadpole::TadpoleEditor(WindowSettings("Tadpole Editor", 800, 600));
 	}
 }

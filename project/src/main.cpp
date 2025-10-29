@@ -1,4 +1,8 @@
+// -- Kobengine Includes --
 #include "KobengineEntryPoint.h"
+
+// -- Tadpole Includes --
+#include "EditorLayer.h"
 
 namespace tadpole
 {
@@ -7,7 +11,11 @@ namespace tadpole
 	public:
 		explicit TadpoleEditor(const kobengine::WindowSettings& windowSettings)
 			: Application(windowSettings)
-		{ }
+		{
+			auto iLayer = m_pLayerStack->PushLayer(std::make_unique<EditorLayer>(m_pWindow.get()));
+			auto editorLayer = dynamic_cast<EditorLayer*>(iLayer);
+			m_pRenderLayer->OnImageRendered.AddListener(editorLayer, &EditorLayer::HandleImageRendered);
+		}
 		~TadpoleEditor() override { }
 	};
 }

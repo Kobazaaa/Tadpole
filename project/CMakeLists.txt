@@ -7,6 +7,9 @@ set(SOURCES
 	"${SOURCE_DIR}/main.cpp"
 	#"${SOURCE_DIR}/Editor.cpp"
 	#"${SOURCE_DIR}/EditorUI.cpp"
+
+	# layers
+	"${SOURCE_DIR}/layers/EditorLayer.cpp"
 )
 
 # Create the executable
@@ -15,6 +18,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Set include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${SOURCE_DIR}"
+	"${SOURCE_DIR}/layers"
 )
 
 # Max Warning Level & Warnings as Errors

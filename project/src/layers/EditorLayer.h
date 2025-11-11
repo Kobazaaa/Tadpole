@@ -5,12 +5,9 @@
 #include "ILayer.h"
 
 // -- Forward Declares --
-namespace kobengine
-{
-	class IWindow;
-}
 namespace pompeii
 {
+	class IWindow;
 	class Image;
 	class Renderer;
 }
@@ -26,7 +23,7 @@ namespace tadpole
 		//--------------------------------------------------
 		//    Constructor & Destructor
 		//--------------------------------------------------
-		explicit EditorLayer(kobengine::IWindow* pWindow);
+		explicit EditorLayer(pompeii::IWindow* pWindow);
 
 		//--------------------------------------------------
 		//    Loop
@@ -41,7 +38,7 @@ namespace tadpole
 		void HandleImageRendered(const pompeii::Image& renderedImage);
 
 	private:
-		kobengine::IWindow* m_pWindow{};
+		pompeii::IWindow* m_pWindow{};
 	};
 }
 

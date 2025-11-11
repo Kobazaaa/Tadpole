@@ -17,7 +17,7 @@ FetchContent_Declare(
     GIT_PROGRESS TRUE
 )
 
-FetchContent_MakeAvailable(imgui) #igfd)
+FetchContent_MakeAvailable(imgui igfd)
 
 # Add the ImGui sources to project
 target_sources(${PROJECT_NAME} PRIVATE
@@ -28,13 +28,13 @@ target_sources(${PROJECT_NAME} PRIVATE
   ${imgui_SOURCE_DIR}/imgui_demo.cpp
   ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
   ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
-  #${igfd_SOURCE_DIR}/ImGuiFileDialog.cpp
+  ${igfd_SOURCE_DIR}/ImGuiFileDialog.cpp
 )
 # don't treat warnings as errors for ImGuiFileDialog
-#set_source_files_properties(${igfd_SOURCE_DIR}/ImGuiFileDialog.cpp PROPERTIES COMPILE_OPTIONS "-WX-")
+set_source_files_properties(${igfd_SOURCE_DIR}/ImGuiFileDialog.cpp PROPERTIES COMPILE_OPTIONS "-WX-")
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
-    #${igfd_SOURCE_DIR}
+    ${igfd_SOURCE_DIR}
 )

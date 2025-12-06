@@ -1,15 +1,25 @@
 #ifndef EDITOR_LAYER_H
 #define EDITOR_LAYER_H
 
-// -- Kobengine Includes --
+// -- Interface Includes --
+#include "IPanel.h"
 #include "ILayer.h"
 
+// -- Rendering Includes --
+#include "Renderer.h"
+
+// -- Utilities Includes --
+#include <memory>
+
 // -- Forward Declares --
+namespace tadpole
+{
+	class ImGuiContext;
+}
 namespace pompeii
 {
 	class IWindow;
 	class Image;
-	class Renderer;
 }
 
 namespace tadpole
@@ -23,22 +33,22 @@ namespace tadpole
 		//--------------------------------------------------
 		//    Constructor & Destructor
 		//--------------------------------------------------
-		explicit EditorLayer(pompeii::IWindow* pWindow);
+		explicit EditorLayer(pompeii::Renderer* pRenderer, std::unique_ptr<ImGuiContext> pImGuiContext);
 
 		//--------------------------------------------------
 		//    Loop
 		//--------------------------------------------------
 		void OnAttach() override;
+		void OnBegin() override;
 		void OnUpdate() override;
+		void OnEnd() override;
 		void OnDetach() override;
 
-		//--------------------------------------------------
-		//    Events
-		//--------------------------------------------------
-		void HandleImageRendered(const pompeii::Image& renderedImage);
-
 	private:
-		pompeii::IWindow* m_pWindow{};
+		pompeii::Renderer*				m_pRenderer{};
+		std::unique_ptr<ImGuiContext>	m_pImGuiContext{};
+
+		std::vector<std::unique_ptr<IPanel>> m_vEditorPanels{};
 	};
 }
 

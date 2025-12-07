@@ -62,7 +62,12 @@ void tadpole::HierarchyPanel::DrawSceneObjectNode(SceneObject* sceneObj)
         flags |= ImGuiTreeNodeFlags_Leaf;
 
     ImGui::PushID(sceneObj);
-    const bool nodeOpen = ImGui::TreeNodeEx(sceneObj->name.c_str(), flags, "%s", sceneObj->name.c_str());
+    const bool isActive = sceneObj->IsActive();
+
+    if (!isActive) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	const bool nodeOpen = ImGui::TreeNodeEx(sceneObj->name.c_str(), flags, "%s", sceneObj->name.c_str());
+    if (!isActive) ImGui::PopStyleColor();
+
 
     if (ImGui::IsItemClicked())
     {

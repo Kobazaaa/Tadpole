@@ -155,8 +155,7 @@ void tadpole::ImGuiContext::Destroy() const
 //--------------------------------------------------
 void tadpole::ImGuiContext::SetupImGuiStyle() const
 {
-	// -- Comfortable Dark Cyan style by SouthCraftX from ImThemes --
-	// Photoshop style by Derydoca from ImThemes
+	// -- Photoshop style by Derydoca from ImThemes --
 	ImGuiStyle& style = ImGui::GetStyle();
 
 	// -- Styling --

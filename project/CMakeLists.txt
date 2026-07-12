@@ -5,6 +5,7 @@
 set(SOURCES
 	# main
 	"${SOURCE_DIR}/main.cpp"
+	"${SOURCE_DIR}/EditorHelpers.cpp"
 
 	# imgui
 	"${SOURCE_DIR}/imgui/ImGuiContext.cpp"
@@ -16,6 +17,7 @@ set(SOURCES
 	"${SOURCE_DIR}/panels/console/ConsolePanel.cpp"
 	"${SOURCE_DIR}/panels/hierarchy/HierarchyPanel.cpp"
 	"${SOURCE_DIR}/panels/inspector/InspectorPanel.cpp"
+	"${SOURCE_DIR}/panels/stats/StatsPanel.cpp"
 	"${SOURCE_DIR}/panels/viewport/ViewportPanel.cpp"
 )
 
@@ -31,6 +33,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${SOURCE_DIR}/panels/console"
 	"${SOURCE_DIR}/panels/hierarchy"
 	"${SOURCE_DIR}/panels/inspector"
+	"${SOURCE_DIR}/panels/stats"
 	"${SOURCE_DIR}/panels/viewport"
 )
 

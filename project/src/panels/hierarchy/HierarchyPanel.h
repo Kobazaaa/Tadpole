@@ -1,4 +1,4 @@
-﻿#ifndef TADPOLE_PANEL_HIERARCHY_H
+#ifndef TADPOLE_PANEL_HIERARCHY_H
 #define TADPOLE_PANEL_HIERARCHY_H
 
 // -- Tadpole Includes --
@@ -39,7 +39,17 @@ namespace tadpole
 		kobengine::Event<kobengine::SceneObject*> OnSelectedObjectChanged;
 
 	private:
+		// -- Drawing --
 		void DrawSceneObjectNode(kobengine::SceneObject* sceneObj);
+		void DrawObjectContextMenu(kobengine::SceneObject* sceneObj);
+		void DrawCreateContextMenu();
+
+		// -- Actions --
+		void SelectObject(kobengine::SceneObject* sceneObj);
+		void DeleteObject(kobengine::SceneObject* sceneObj);
+		void HandleShortcuts();
+
+		// -- Selection --
 		kobengine::SceneObject* m_pSelectedObject{};
 	};
 }

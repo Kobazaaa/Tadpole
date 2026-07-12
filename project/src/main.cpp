@@ -15,6 +15,7 @@ namespace tadpole
 		{
 			m_pLayerStack->PushLayer(
 				std::make_unique<EditorLayer>(
+					m_pWindow.get(),
 					m_pRenderLayer->GetRenderer().get(),
 					std::make_unique<ImGuiContext>(
 						m_pWindow.get(),

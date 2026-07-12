@@ -9,7 +9,9 @@
 #include "Renderer.h"
 
 // -- Utilities Includes --
+#include <functional>
 #include <memory>
+#include <string>
 
 // -- Forward Declares --
 namespace tadpole
@@ -25,7 +27,7 @@ namespace pompeii
 namespace tadpole
 {
 	//? ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//? ~~	  EditorLayer	
+	//? ~~	  EditorLayer
 	//? ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	class EditorLayer final : public kobengine::ILayer
 	{
@@ -33,7 +35,7 @@ namespace tadpole
 		//--------------------------------------------------
 		//    Constructor & Destructor
 		//--------------------------------------------------
-		explicit EditorLayer(pompeii::Renderer* pRenderer, std::unique_ptr<ImGuiContext> pImGuiContext);
+		explicit EditorLayer(pompeii::IWindow* pWindow, pompeii::Renderer* pRenderer, std::unique_ptr<ImGuiContext> pImGuiContext);
 
 		//--------------------------------------------------
 		//    Loop
@@ -45,11 +47,24 @@ namespace tadpole
 		void OnDetach() override;
 
 	private:
+		//--------------------------------------------------
+		//    Helpers
+		//--------------------------------------------------
+		void DrawMenuBar();
+		void BuildDefaultDockLayout(ImGuiID dockSpaceID) const;
+		void HandleFileDialogs();
+		void HandleFileDialog(const std::string& key, const std::function<void(const std::string&)>& func) const;
+		void DrawAboutPopup();
+
+		pompeii::IWindow*				m_pWindow{};
 		pompeii::Renderer*				m_pRenderer{};
 		std::unique_ptr<ImGuiContext>	m_pImGuiContext{};
 
 		std::vector<std::unique_ptr<IPanel>> m_vEditorPanels{};
+
+		bool m_ResetDockLayout{ false };
+		bool m_OpenAboutPopup{ false };
 	};
 }
 
-#endif // RENDER_LAYER_H
+#endif // EDITOR_LAYER_H

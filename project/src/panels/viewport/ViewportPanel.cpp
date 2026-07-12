@@ -8,12 +8,14 @@
 
 // -- Kobengine Includes --
 #include "InputManager.h"
+#include "Timer.h"
 
 //--------------------------------------------------
 //    Constructor & Destructor
 //--------------------------------------------------
 tadpole::ViewportPanel::ViewportPanel(pompeii::Renderer* pRenderer)
-	: m_pRenderer(pRenderer)
+	: IPanel("Viewport")
+	, m_pRenderer(pRenderer)
 {}
 
 
@@ -42,9 +44,14 @@ void tadpole::ViewportPanel::OnActivate()
 }
 void tadpole::ViewportPanel::OnImGuiRender()
 {
+	if (!IsOpen)
+		return;
+
+	m_SmoothedDeltaTime += (kobengine::Timer::GetDeltaSeconds() - m_SmoothedDeltaTime) * 0.05f;
+
 	ImGui::SetNextWindowSize({ 800, 600 }, ImGuiCond_FirstUseEver);
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar;
-	ImGui::Begin("Viewport", nullptr, flags);
+	ImGui::Begin(GetName().c_str(), &IsOpen, flags);
 
 	DrawToolbar();
 	ImGui::Separator();
@@ -78,8 +85,40 @@ void tadpole::ViewportPanel::DrawToolbar()
 			ImGui::EndMenu();
 		}
 
+		if (ImGui::BeginMenu("View"))
+		{
+			ImGui::MenuItem("Stats Overlay", nullptr, &m_ShowStatsOverlay);
+			ImGui::EndMenu();
+		}
+
+		// -- Right-Aligned Info --
+		const VkExtent2D extent = m_pRenderer->GetOutputImages()[m_pRenderer->GetContext().currentFrame].GetExtent2D();
+		char info[64];
+		snprintf(info, sizeof(info), "%ux%u  |  %.0f FPS", extent.width, extent.height, 1.f / m_SmoothedDeltaTime);
+		const float infoWidth = ImGui::CalcTextSize(info).x;
+		ImGui::SameLine(ImGui::GetWindowWidth() - infoWidth - ImGui::GetStyle().FramePadding.x * 2.f - ImGui::GetStyle().ItemSpacing.x);
+		ImGui::TextDisabled("%s", info);
+
 		ImGui::EndMenuBar();
 	}
+}
+void tadpole::ViewportPanel::DrawStatsOverlay(const ImVec2& imageScreenPos) const
+{
+	const VkExtent2D extent = m_pRenderer->GetOutputImages()[m_pRenderer->GetContext().currentFrame].GetExtent2D();
+	char text[128];
+	snprintf(text, sizeof(text), "FPS:        %.1f\nFrame Time: %.2f ms\nResolution: %ux%u",
+		1.f / m_SmoothedDeltaTime, m_SmoothedDeltaTime * 1000.f, extent.width, extent.height);
+
+	ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+	const ImVec2 padding{ 8.f, 6.f };
+	const ImVec2 textPos{ imageScreenPos.x + 10.f, imageScreenPos.y + 10.f };
+	const ImVec2 textSize = ImGui::CalcTextSize(text);
+
+	pDrawList->AddRectFilled(
+		{ textPos.x - padding.x, textPos.y - padding.y },
+		{ textPos.x + textSize.x + padding.x, textPos.y + textSize.y + padding.y },
+		IM_COL32(0, 0, 0, 150), 4.f);
+	pDrawList->AddText(textPos, IM_COL32(255, 255, 255, 220), text);
 }
 void tadpole::ViewportPanel::DrawBuiltInPresets()
 {
@@ -242,7 +281,10 @@ void tadpole::ViewportPanel::DrawOutput()
 		(childSize.y - imageSize.y) * 0.5f
 	));
 
+	const ImVec2 imageScreenPos = ImGui::GetCursorScreenPos();
 	ImGui::Image(m_vDescriptorSets[m_pRenderer->GetContext().currentFrame], imageSize);
+	if (m_ShowStatsOverlay)
+		DrawStatsOverlay(imageScreenPos);
 	kobengine::InputManager::SetInputActive(ImGui::IsWindowFocused());
 	ImGui::EndChild();
 }

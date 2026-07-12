@@ -1,7 +1,14 @@
-﻿// -- Tadpole Includes --
+// -- Tadpole Includes --
 #include "ConsolePanel.h"
 
+// -- Standard Library --
+#include <algorithm>
+
+// -- ImGui --
+#include "imgui_internal.h"
+
 // -- Kobengine Includes --
+#include "EditorHelpers.h"
 #include "Event.h"
 #include "Timer.h"
 
@@ -9,6 +16,7 @@
 //    Constructor & Destructor
 //--------------------------------------------------
 tadpole::ConsolePanel::ConsolePanel()
+	: IPanel("Console")
 { }
 
 //--------------------------------------------------
@@ -22,53 +30,19 @@ void tadpole::ConsolePanel::OnActivate()
 
 void tadpole::ConsolePanel::OnImGuiRender()
 {
-	ImGui::Begin("Console");
+	if (!IsOpen)
+		return;
 
-    if (ImGui::Button("Clear"))
-		m_vLogItems.clear();
+	ImGui::Begin(GetName().c_str(), &IsOpen);
 
-	ImGui::SameLine();
-	ImGui::Checkbox("Auto Scroll", &m_AutoScroll);
-	ImGui::SameLine();
-	ImGui::Checkbox("Info", &m_ShowInfo);
-	ImGui::SameLine();
-	ImGui::Checkbox("Warnings", &m_ShowWarnings);
-	ImGui::SameLine();
-	ImGui::Checkbox("Errors", &m_ShowErrors);
+	DrawToolbar();
 
-    ImGui::BeginChild("ScrollingRegion", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), true);
-	for (const auto& [message, severity, count] : m_vLogItems)
-	{
-		// filter
-		if ((severity == kobengine::LogSeverity::Error && !m_ShowErrors) ||
-			(severity == kobengine::LogSeverity::Warning && !m_ShowWarnings) ||
-			(severity == kobengine::LogSeverity::Normal && !m_ShowInfo))
-			continue;
+	const std::vector<DisplayItem> displayItems = BuildDisplayList();
 
-		// color
-		ImVec4 color;
-		switch (severity)
-		{
-		case kobengine::LogSeverity::Error:		color = ImVec4(1, 0.3f, 0.3f, 1); break;
-		case kobengine::LogSeverity::Warning:	color = ImVec4(1, 1, 0.4f, 1);    break;
-		default:								color = ImVec4(1, 1, 1, 1);       break;
-		}
+    ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), ImGuiChildFlags_Borders);
+	DrawLogItems(displayItems);
 
-		// txt
-		float maxTextWidth = ImGui::GetWindowWidth() - 50;
-		ImGui::PushStyleColor(ImGuiCol_Text, color);
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + maxTextWidth);
-		ImGui::TextUnformatted(message.c_str());
-		ImGui::PopTextWrapPos();
-		if (count > 0)
-		{
-			ImGui::SameLine(maxTextWidth);
-			ImGui::Text("[%d]", count + 1);
-		}
-		ImGui::PopStyleColor();
-	}
-
-	bool scrollAtBottom = (ImGui::GetScrollY() >= ImGui::GetScrollMaxY());
+	const bool scrollAtBottom = (ImGui::GetScrollY() >= ImGui::GetScrollMaxY());
 	if (m_AutoScroll && scrollAtBottom)
 		ImGui::SetScrollHereY(1.0f);
 	ImGui::EndChild();
@@ -83,36 +57,167 @@ void tadpole::ConsolePanel::OnDeactivate()
 
 
 //--------------------------------------------------
-//    Helper
+//    Helpers
 //--------------------------------------------------
 void tadpole::ConsolePanel::LogMessage(const std::string& msg, kobengine::LogSeverity severity)
 {
-	const char* prefix;
-	switch (severity)
-	{
-	case kobengine::LogSeverity::Normal:
-		prefix = "[INFO]  ";
-		break;
-	case kobengine::LogSeverity::Warning:
-		prefix = "[WARN]  ";
-		break;
-	case kobengine::LogSeverity::Error:
-		prefix = "[ERROR] ";
-		break;
-	default:
-		prefix = "[INFO]  ";
-		break;
-	}
-
-	ConsoleItem newItem = ConsoleItem{ prefix + msg, severity, 0 };
-	auto it = std::find_if(m_vLogItems.begin(), m_vLogItems.end(), [&newItem](const ConsoleItem& item)
-	{
-			return item.message == newItem.message && item.severity == newItem.severity;
-	});
-	if (it != m_vLogItems.end()) ++it->count;
-	else m_vLogItems.push_back(newItem);
-
-	if (m_vLogItems.size() >= m_MaxLogCount)
+	m_vLogItems.push_back(ConsoleItem{ msg, severity, kobengine::Timer::GetTotalTimeSeconds() });
+	if (m_vLogItems.size() > MAX_LOG_COUNT)
 		m_vLogItems.pop_front();
 }
+void tadpole::ConsolePanel::DrawToolbar()
+{
+	if (ImGui::Button("Clear")) m_vLogItems.clear();
+	ImGui::SameLine();
+	if (ImGui::Button("Copy")) CopyToClipboard(BuildDisplayList());
 
+	ImGui::SameLine();
+	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+	ImGui::SameLine();
+
+	ImGui::Checkbox("Collapse", &m_Collapse);
+	ImGui::SameLine();
+	ImGui::Checkbox("Auto Scroll", &m_AutoScroll);
+
+	ImGui::SameLine();
+	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+	ImGui::SameLine();
+
+	// -- Severity Filters (with counts) --
+	uint32_t infoCount = 0, warningCount = 0, errorCount = 0;
+	for (const ConsoleItem& item : m_vLogItems)
+	{
+		switch (item.severity)
+		{
+		case kobengine::LogSeverity::Error:		++errorCount;	break;
+		case kobengine::LogSeverity::Warning:	++warningCount;	break;
+		default:								++infoCount;	break;
+		}
+	}
+
+	char label[32];
+	snprintf(label, sizeof(label), "Info (%u)###Info", infoCount);
+	ImGui::Checkbox(label, &m_ShowInfo);
+	ImGui::SameLine();
+	ImGui::PushStyleColor(ImGuiCol_Text, SeverityColor(kobengine::LogSeverity::Warning));
+	snprintf(label, sizeof(label), "Warnings (%u)###Warnings", warningCount);
+	ImGui::Checkbox(label, &m_ShowWarnings);
+	ImGui::PopStyleColor();
+	ImGui::SameLine();
+	ImGui::PushStyleColor(ImGuiCol_Text, SeverityColor(kobengine::LogSeverity::Error));
+	snprintf(label, sizeof(label), "Errors (%u)###Errors", errorCount);
+	ImGui::Checkbox(label, &m_ShowErrors);
+	ImGui::PopStyleColor();
+
+	// -- Search --
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(-FLT_MIN);
+	ImGui::InputTextWithHint("##ConsoleSearch", "Search...", m_SearchBuffer, sizeof(m_SearchBuffer));
+}
+void tadpole::ConsolePanel::DrawLogItems(const std::vector<DisplayItem>& items) const
+{
+	for (const DisplayItem& displayItem : items)
+	{
+		const ConsoleItem& item = *displayItem.pItem;
+
+		// timestamp
+		ImGui::TextDisabled("[%8.2f]", item.time);
+		ImGui::SameLine();
+
+		// message
+		const float maxTextWidth = ImGui::GetWindowWidth() - 60.f;
+		ImGui::PushStyleColor(ImGuiCol_Text, SeverityColor(item.severity));
+		ImGui::PushTextWrapPos(maxTextWidth);
+		ImGui::TextUnformatted(item.message.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::PopStyleColor();
+
+		// collapse count badge
+		if (displayItem.count > 1)
+		{
+			ImGui::SameLine(maxTextWidth);
+			ImGui::TextDisabled("[%u]", displayItem.count);
+		}
+	}
+
+	if (items.empty())
+		ImGui::TextDisabled(m_vLogItems.empty() ? "No messages." : "No messages match the current filters.");
+}
+std::vector<tadpole::ConsolePanel::DisplayItem> tadpole::ConsolePanel::BuildDisplayList() const
+{
+	std::vector<DisplayItem> result;
+	result.reserve(m_vLogItems.size());
+
+	if (!m_Collapse)
+	{
+		for (const ConsoleItem& item : m_vLogItems)
+			if (PassesFilter(item))
+				result.push_back(DisplayItem{ &item, 1 });
+		return result;
+	}
+
+	std::unordered_map<std::string, size_t> indexLookup;
+	for (const ConsoleItem& item : m_vLogItems)
+	{
+		if (!PassesFilter(item))
+			continue;
+
+		std::string key = std::to_string(static_cast<int>(item.severity)) + item.message;
+		if (const auto it = indexLookup.find(key); it != indexLookup.end())
+		{
+			++result[it->second].count;
+		}
+		else
+		{
+			indexLookup.emplace(std::move(key), result.size());
+			result.push_back(DisplayItem
+				{
+					.pItem = &item,
+					.count = 1
+				});
+		}
+	}
+	return result;
+}
+bool tadpole::ConsolePanel::PassesFilter(const ConsoleItem& item) const
+{
+	if ((item.severity == kobengine::LogSeverity::Error && !m_ShowErrors) ||
+		(item.severity == kobengine::LogSeverity::Warning && !m_ShowWarnings) ||
+		(item.severity == kobengine::LogSeverity::Normal && !m_ShowInfo))
+		return false;
+	return filters::ContainsCaseInsensitive(item.message, m_SearchBuffer);
+}
+void tadpole::ConsolePanel::CopyToClipboard(const std::vector<DisplayItem>& items) const
+{
+	std::string text;
+	for (const DisplayItem& displayItem : items)
+	{
+		text += SeverityTag(displayItem.pItem->severity);
+		text += displayItem.pItem->message;
+		if (displayItem.count > 1)
+			text += " [x" + std::to_string(displayItem.count) + "]";
+		text += '\n';
+	}
+	ImGui::SetClipboardText(text.c_str());
+}
+
+const char* tadpole::ConsolePanel::SeverityTag(kobengine::LogSeverity severity)
+{
+	switch (severity)
+	{
+	case kobengine::LogSeverity::Error:		return "[ERROR] ";
+	case kobengine::LogSeverity::Warning:	return "[WARN]  ";
+	case kobengine::LogSeverity::Normal:	return "[INFO]  ";
+	default:								return "[INFO]  ";
+	}
+}
+ImVec4 tadpole::ConsolePanel::SeverityColor(kobengine::LogSeverity severity)
+{
+	switch (severity)
+	{
+	case kobengine::LogSeverity::Error:		return { 1.f, 0.35f, 0.35f, 1.f };
+	case kobengine::LogSeverity::Warning:	return { 1.f, 0.85f, 0.35f, 1.f };
+	case kobengine::LogSeverity::Normal:	return { 0.85f, 0.85f, 0.85f, 1.f };
+	default:								return { 0.85f, 0.85f, 0.85f, 1.f };
+	}
+}

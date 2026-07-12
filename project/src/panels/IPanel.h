@@ -1,5 +1,8 @@
-﻿#ifndef TADPOLE_INTERFACE_PANEL_H
+#ifndef TADPOLE_INTERFACE_PANEL_H
 #define TADPOLE_INTERFACE_PANEL_H
+
+// -- Standard Library --
+#include <string>
 
 // -- ImGui --
 #include "imgui.h"
@@ -16,6 +19,9 @@ namespace tadpole
         //--------------------------------------------------
         //    Constructor & Destructor
         //--------------------------------------------------
+        explicit IPanel(std::string name)
+	        : m_Name(std::move(name))
+        {}
         virtual ~IPanel() = default;
 
 		//--------------------------------------------------
@@ -24,6 +30,15 @@ namespace tadpole
         virtual void OnActivate() = 0;
         virtual void OnImGuiRender() = 0;
         virtual void OnDeactivate() = 0;
+
+		//--------------------------------------------------
+		//    Accessors
+		//--------------------------------------------------
+        const std::string& GetName() const { return m_Name; }
+        bool IsOpen = true;
+
+    private:
+        std::string m_Name{};
     };
 }
 

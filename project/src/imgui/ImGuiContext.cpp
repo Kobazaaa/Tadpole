@@ -45,6 +45,7 @@ tadpole::ImGuiContext::ImGuiContext(const pompeii::IWindow* pWindow, pompeii::Re
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 	SetupImGuiStyle();
 
@@ -242,6 +243,10 @@ void tadpole::ImGuiContext::SetupImGuiStyle() const
 	style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.0f, 0.3882353007793427f, 0.0f, 1.0f);
 	style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.5860000252723694f);
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.5860000252723694f);
+	style.Colors[ImGuiCol_DockingPreview] = ImVec4(1.0f, 0.3882353007793427f, 0.0f, 0.5f);
+	style.Colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.1176470592617989f, 0.1176470592617989f, 0.1176470592617989f, 1.0f);
+	style.Colors[ImGuiCol_CheckMark] = ImVec4(1.0f, 0.3882353007793427f, 0.0f, 1.0f);
+	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.1882352977991104f, 0.1882352977991104f, 0.1882352977991104f, 1.0f);
 
 	// -- Base Font --
 	ImGuiIO& io = ImGui::GetIO();

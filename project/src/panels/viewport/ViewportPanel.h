@@ -55,9 +55,14 @@ namespace tadpole
 		void DrawBuiltInPresets();
 		void DrawCustomPresets();
 		void DrawAddPreset();
+		void DrawStatsOverlay(const ImVec2& imageScreenPos) const;
 
 		void DrawOutput();
 		void ResizeOutput(uint32_t w, uint32_t h);
+
+		// stats
+		bool m_ShowStatsOverlay{ false };
+		float m_SmoothedDeltaTime{ 1.f / 60.f };
 
 		// aspect
 		std::vector<AspectPreset> m_vPresets = {

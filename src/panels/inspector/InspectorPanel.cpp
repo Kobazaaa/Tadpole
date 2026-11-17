@@ -169,47 +169,43 @@ void tadpole::InspectorPanel::DrawLight(LightComponent* pLight) const
 	if (ImGui::CollapsingHeader(pLight->name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		auto& lightingSystem = ServiceLocator::Get<LightingSystem>();
-		pompeii::Light& light = pLight->lightData;
-		const bool isDirectional = light.type == pompeii::LightType::Directional;
+		const bool isDirectional = pLight->type == pompeii::LightType::Directional;
 
 		// --- Type ---
-		int type = static_cast<int>(light.type);
+		int type = static_cast<int>(pLight->type);
 		if (ImGui::Combo("Type", &type, "Directional\0Point\0"))
 		{
-			light.type = static_cast<pompeii::LightType>(type);
-			if (light.type == pompeii::LightType::Point) light.dirPos = pLight->GetTransform().GetPosition();
-			else light.dirPos = glm::vec3{ 0.577f, -0.577f, 0.577f };
-			light.CalculateLightMatrices(pLight->GetSceneObject().GetScene().GetAABB());
+			pLight->type = static_cast<pompeii::LightType>(type);
+			if (pLight->type == pompeii::LightType::Point) pLight->dirPos = pLight->GetTransform().GetPosition();
+			else pLight->dirPos = glm::vec3{ 0.577f, -0.577f, 0.577f };
 			lightingSystem.UpdateLight(*pLight);
 		}
 
 		// --- Direction / Position ---
 		if (isDirectional)
 		{
-			if (ImGui::DragFloat3("Direction", &light.dirPos.x, 0.01f))
+			if (ImGui::DragFloat3("Direction", &pLight->dirPos.x, 0.01f))
 				lightingSystem.UpdateLight(*pLight);
 		}
 		else
 		{
-			if (ImGui::DragFloat3("Position", &light.dirPos.x, 0.1f))
+			if (ImGui::DragFloat3("Position", &pLight->dirPos.x, 0.1f))
 			{
-				pLight->GetTransform().SetPosition(light.dirPos);
+				pLight->GetTransform().SetPosition(pLight->dirPos);
 				lightingSystem.UpdateLight(*pLight);
 			}
 		}
 
 		// --- Intensity & Color ---
-		if (ImGui::DragFloat(isDirectional ? "Intensity (lux)" : "Intensity (lumen)", &light.luxLumen, 1.f, 0.f, 1000000.f))
+		if (ImGui::DragFloat(isDirectional ? "Intensity (lux)" : "Intensity (lumen)", &pLight->luxLumen, 1.f, 0.f, 1000000.f))
 			lightingSystem.UpdateLight(*pLight);
-		if (ImGui::ColorEdit3("Color", &light.color.r))
+		if (ImGui::ColorEdit3("Color", &pLight->color.r))
 			lightingSystem.UpdateLight(*pLight);
 
 		// --- Shadows ---
+		// UpdateLight recomputes the shadow-frustum matrices internally (see Renderer::UpdateLight).
 		if (ImGui::Button("Recalculate Shadow Matrices"))
-		{
-			light.CalculateLightMatrices(pLight->GetSceneObject().GetScene().GetAABB());
 			lightingSystem.UpdateLight(*pLight);
-		}
 	}
 	ImGui::PopID();
 }
@@ -218,12 +214,12 @@ void tadpole::InspectorPanel::DrawMeshFilter(MeshFilter* pMeshFilter)
 	ImGui::PushID(pMeshFilter);
 	if (ImGui::CollapsingHeader(pMeshFilter->name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (const pompeii::Mesh* pMesh = pMeshFilter->pMesh)
+		const pompeii::Renderer* pRenderer = ServiceLocator::Get<RenderSystem>().GetRenderer();
+		if (const pompeii::Mesh* pMesh = pRenderer->TryGetMesh(pMeshFilter->meshHandle))
 		{
-			ImGui::Text("Vertices:  %u", static_cast<uint32_t>(pMesh->vertices.size()));
-			ImGui::Text("Indices:   %u", static_cast<uint32_t>(pMesh->indices.size()));
+			ImGui::Text("Vertices:  %u", static_cast<uint32_t>(pMesh->vertexBuffer.Size() / sizeof(pompeii::Vertex)));
+			ImGui::Text("Indices:   %u", static_cast<uint32_t>(pMesh->indexBuffer.Size() / sizeof(uint32_t)));
 			ImGui::Text("Submeshes: %u", static_cast<uint32_t>(pMesh->vSubMeshes.size()));
-			ImGui::Text("Textures:  %u", static_cast<uint32_t>(pMesh->images.size()));
 		}
 		else
 		{
@@ -245,12 +241,13 @@ void tadpole::InspectorPanel::DrawMeshRenderer(MeshRenderer* pMeshRenderer) cons
 	if (ImGui::CollapsingHeader(pMeshRenderer->name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		MeshFilter* pOwnFilter = m_pSelectedObject->GetComponent<MeshFilter>();
+		const pompeii::Renderer* pRenderer = ServiceLocator::Get<RenderSystem>().GetRenderer();
 
 		if (!pMeshRenderer->pMeshFilter)
 			ImGui::TextColored(ImVec4(1.f, 0.4f, 0.4f, 1.f), "No MeshFilter linked.");
 		else if (&pMeshRenderer->pMeshFilter->GetSceneObject() != m_pSelectedObject)
 			ImGui::Text("Linked to MeshFilter on \"%s\"", pMeshRenderer->pMeshFilter->GetSceneObject().name.c_str());
-		else if (!pMeshRenderer->pMeshFilter->pMesh)
+		else if (!pRenderer->IsValid(pMeshRenderer->pMeshFilter->meshHandle))
 			ImGui::TextColored(ImVec4(1.f, 0.8f, 0.2f, 1.f), "Linked MeshFilter has no mesh.");
 		else
 			ImGui::TextDisabled("Linked to this object's MeshFilter.");
@@ -308,12 +305,14 @@ void tadpole::InspectorPanel::DrawAddComponent() const
 	}
 
 	// MeshRenderer requires a MeshFilter with a loaded mesh; adding one without would crash the engine
-	const bool canAddRenderer = !hasRenderer && pFilter && pFilter->pMesh;
+	const pompeii::Renderer* pRenderer = ServiceLocator::Get<RenderSystem>().GetRenderer();
+	const bool hasMesh = pFilter && pRenderer->IsValid(pFilter->meshHandle);
+	const bool canAddRenderer = !hasRenderer && hasMesh;
 	if (ImGui::MenuItem("Mesh Renderer", nullptr, false, canAddRenderer))
 	{
 		m_pSelectedObject->AddComponent<MeshRenderer>(*pFilter);
 	}
-	if (!hasRenderer && (!pFilter || !pFilter->pMesh))
+	if (!hasRenderer && !hasMesh)
 		ImGui::TextDisabled("Mesh Renderer requires a Mesh Filter\nwith a loaded mesh.");
 
 	ImGui::EndPopup();
@@ -391,19 +390,20 @@ void tadpole::InspectorPanel::HandleLoadMeshDialog() const
 		MeshFilter* pMeshFilter{};
 		if (m_pSelectedObject->TryGetComponent(pMeshFilter))
 		{
-			pompeii::Mesh* pMesh{};
+			pompeii::MeshHandle meshHandle{};
 			try
 			{
-				pMesh = ServiceLocator::Get<AssetManager>().LoadMesh(path);
+				meshHandle = ServiceLocator::Get<AssetManager>().LoadMesh(path);
 			}
 			catch (const std::exception& e)
 			{
 				Debug::LogError("Failed to load mesh \"" + path + "\": " + e.what());
 			}
 
-			if (pMesh)
+			pompeii::Renderer* pRenderer = ServiceLocator::Get<RenderSystem>().GetRenderer();
+			if (const pompeii::Mesh* pMesh = pRenderer->TryGetMesh(meshHandle))
 			{
-				pMeshFilter->pMesh = pMesh;
+				pMeshFilter->meshHandle = meshHandle;
 				m_pSelectedObject->GetScene().GrowAABB(pMesh->aabb);
 				ReRegisterMeshRenderer();
 				Debug::Log("Loaded mesh \"" + path + "\"");

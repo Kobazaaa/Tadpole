@@ -251,6 +251,6 @@ void tadpole::ImGuiContext::SetupImGuiStyle() const
 	// -- Base Font --
 	ImGuiIO& io = ImGui::GetIO();
 	io.Fonts->Clear();
-	io.Fonts->AddFontFromFileTTF("./fonts/JetBrainsMono-Medium.ttf", 22.f);
+	io.Fonts->AddFontFromFileTTF("./fonts/JetBrainsMono-Medium.ttf", 16.f);
 	io.FontDefault = io.Fonts->Fonts.back();
 }

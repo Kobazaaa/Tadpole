@@ -51,20 +51,20 @@ namespace
 		if (source.TryGetComponent(pLight))
 		{
 			copy.AddComponent<LightComponent>(
-				pLight->lightData.dirPos,
-				pLight->lightData.color,
-				pLight->lightData.luxLumen,
-				pLight->lightData.type);
+				pLight->dirPos,
+				pLight->color,
+				pLight->luxLumen,
+				pLight->type);
 		}
 
 		MeshFilter* pFilter{};
 		if (source.TryGetComponent(pFilter))
 		{
 			MeshFilter* pNewFilter = copy.AddComponent<MeshFilter>();
-			pNewFilter->pMesh = pFilter->pMesh;
+			pNewFilter->meshHandle = pFilter->meshHandle;
 
 			MeshRenderer* pRenderer{};
-			if (source.TryGetComponent(pRenderer) && pNewFilter->pMesh)
+			if (source.TryGetComponent(pRenderer) && pNewFilter->meshHandle.IsValid())
 				copy.AddComponent<MeshRenderer>(*pNewFilter);
 		}
 
@@ -106,17 +106,17 @@ namespace tadpole::actions
 	}
 	SceneObject* ImportModel(const std::string& path)
 	{
-		pompeii::Mesh* pMesh{};
+		pompeii::MeshHandle meshHandle{};
 		try
 		{
-			pMesh = ServiceLocator::Get<AssetManager>().LoadMesh(path);
+			meshHandle = ServiceLocator::Get<AssetManager>().LoadMesh(path);
 		}
 		catch (const std::exception& e)
 		{
 			Debug::LogError("Failed to import model \"" + path + "\": " + e.what());
 			return nullptr;
 		}
-		if (!pMesh)
+		if (!meshHandle.IsValid())
 		{
 			Debug::LogError("Failed to import model \"" + path + "\"");
 			return nullptr;
@@ -128,7 +128,7 @@ namespace tadpole::actions
 
 		SceneObject& obj = ActiveScene().AddEmpty(name);
 		MeshFilter* pFilter = obj.AddComponent<MeshFilter>();
-		pFilter->pMesh = pMesh;
+		pFilter->meshHandle = meshHandle;
 		obj.AddComponent<MeshRenderer>(*pFilter);
 
 		Debug::Log("Imported model \"" + path + "\"");

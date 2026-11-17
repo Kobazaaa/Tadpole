@@ -99,8 +99,8 @@ void tadpole::StatsPanel::DrawSceneStats() const
 		if (obj->HasComponent<Camera>()) ++cameraCount;
 	}
 
-	const std::vector<pompeii::Mesh*> meshes = ServiceLocator::Get<AssetManager>().GetAllMeshes();
-	const int meshCount = static_cast<int>(std::ranges::count_if(meshes, [](const pompeii::Mesh* pMesh) { return pMesh != nullptr; }));
+	const std::vector<pompeii::MeshHandle> meshes = ServiceLocator::Get<AssetManager>().GetAllMeshes();
+	const int meshCount = static_cast<int>(std::ranges::count_if(meshes, [](const pompeii::MeshHandle handle) { return handle.IsValid(); }));
 
 	ImGui::Text("Objects:        %d (%d active)", totalObjects, activeObjects);
 	ImGui::Text("Cameras:        %d", cameraCount);
